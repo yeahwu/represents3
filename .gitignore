@@ -1,0 +1,6 @@
+.env
+cert-cache/
+represents3
+dist/
+bin/
+.DS_Store
