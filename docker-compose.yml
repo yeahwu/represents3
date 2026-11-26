@@ -1,0 +1,16 @@
+services:
+  proxy:
+    build: .
+    container_name: represents3
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LISTEN_HTTP: ":8080"
+      LISTEN_HTTPS: ":8443"
+      CERT_CACHE_DIR: "/app/cert-cache"
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - ./cert-cache:/app/cert-cache
