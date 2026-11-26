@@ -48,6 +48,12 @@ go mod tidy
 go run .
 ```
 
+Or Variable
+
+```bash
+env PROXY_DOMAINS=proxy.example.com PROXY_USER=proxyuser PROXY_PASS='your-strong-password' ACME_EMAIL=admin@example.com LOG_LEVEL=info go run .
+```
+
 ## Run with Docker
 
 ```bash
