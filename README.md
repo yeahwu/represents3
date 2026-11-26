@@ -35,10 +35,19 @@ Key variables:
 
 ## Run Locally
 
+Build
+
 ```bash
 make tidy
 make build
 ./represents3
+```
+Or go build
+
+```
+cd /path/to/represents3
+go mod tidy
+go build -o represents3 .
 ```
 
 Or directly:
