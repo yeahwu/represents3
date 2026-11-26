@@ -1,0 +1,16 @@
+[Unit]
+Description=represents3 HTTPS Forward Proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/lib/represents3
+EnvironmentFile=-/etc/represents3/env
+ExecStart=/usr/local/bin/represents3
+Restart=always
+RestartSec=2
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
