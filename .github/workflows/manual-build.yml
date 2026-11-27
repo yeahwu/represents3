@@ -95,12 +95,15 @@ jobs:
           go-version: ${{ inputs.go_version }}
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Prepare dependencies
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Build binary (${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.goarm != '' && format('/v{0}', matrix.goarm) || '' }})
         env:
           CGO_ENABLED: "0"
+          GOFLAGS: "-mod=mod"
           APP_VERSION: ${{ inputs.app_version }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -143,12 +146,15 @@ jobs:
           go-version: ${{ inputs.go_version }}
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Prepare dependencies
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Build single target
         env:
           CGO_ENABLED: "0"
+          GOFLAGS: "-mod=mod"
           APP_VERSION: ${{ inputs.app_version }}
           GOOS: ${{ inputs.target_os }}
           GOARCH: ${{ inputs.target_arch }}
