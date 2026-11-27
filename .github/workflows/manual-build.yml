@@ -1,0 +1,179 @@
+name: Manual Multi-Arch Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: Build all predefined targets or one selected target
+        type: choice
+        options:
+          - all
+          - single
+        required: true
+        default: all
+      go_version:
+        description: Go version (for example 1.22.x)
+        required: true
+        default: "1.22.x"
+      app_version:
+        description: Application version used in artifact/binary names (for example v1.0.0)
+        required: true
+        default: "v1.0.0"
+      target_os:
+        description: Target OS for single mode (ignored in all mode)
+        type: choice
+        options:
+          - linux
+          - darwin
+          - windows
+        required: true
+        default: linux
+      target_arch:
+        description: Target architecture for single mode (ignored in all mode)
+        type: choice
+        options:
+          - amd64
+          - arm64
+          - arm
+          - 386
+        required: true
+        default: amd64
+      target_arm:
+        description: GOARM for single mode when target_arch=arm (ignored otherwise)
+        type: choice
+        options:
+          - "7"
+          - "6"
+          - "5"
+        required: true
+        default: "7"
+
+jobs:
+  build-all:
+    if: ${{ inputs.build_mode == 'all' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            goarm: ""
+          - goos: linux
+            goarch: arm64
+            goarm: ""
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+          - goos: linux
+            goarch: arm
+            goarm: "6"
+          - goos: linux
+            goarch: 386
+            goarm: ""
+          - goos: darwin
+            goarch: amd64
+            goarm: ""
+          - goos: darwin
+            goarch: arm64
+            goarm: ""
+          - goos: windows
+            goarch: amd64
+            goarm: ""
+          - goos: windows
+            goarch: arm64
+            goarm: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary (${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.goarm != '' && format('/v{0}', matrix.goarm) || '' }})
+        env:
+          CGO_ENABLED: "0"
+          APP_VERSION: ${{ inputs.app_version }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+        run: |
+          mkdir -p dist
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then
+            EXT=".exe"
+          fi
+
+          ARCH_SUFFIX="$GOARCH"
+          if [ "$GOARCH" = "arm" ]; then
+            ARCH_SUFFIX="armv${GOARM}"
+          fi
+
+          OUT="dist/represents3-${APP_VERSION}-${GOOS}-${ARCH_SUFFIX}${EXT}"
+          go build -trimpath -ldflags="-s -w" -o "$OUT" .
+          ls -lh "$OUT"
+
+      - name: Upload artifact (${{ matrix.goos }}/${{ matrix.goarch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: represents3-${{ inputs.app_version }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm != '' && format('v{0}', matrix.goarm) || '' }}
+          path: dist/represents3-*
+          if-no-files-found: error
+
+  build-single:
+    if: ${{ inputs.build_mode == 'single' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build single target
+        env:
+          CGO_ENABLED: "0"
+          APP_VERSION: ${{ inputs.app_version }}
+          GOOS: ${{ inputs.target_os }}
+          GOARCH: ${{ inputs.target_arch }}
+          GOARM_INPUT: ${{ inputs.target_arm }}
+        run: |
+          mkdir -p dist
+
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then
+            EXT=".exe"
+          fi
+
+          ARCH_SUFFIX="$GOARCH"
+          if [ "$GOARCH" = "arm" ]; then
+            export GOARM="${GOARM_INPUT:-7}"
+            ARCH_SUFFIX="armv${GOARM}"
+          fi
+
+          OUT="dist/represents3-${APP_VERSION}-${GOOS}-${ARCH_SUFFIX}${EXT}"
+          go build -trimpath -ldflags="-s -w" -o "$OUT" .
+          ls -lh "$OUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: represents3-${{ inputs.app_version }}-${{ inputs.target_os }}-${{ inputs.target_arch }}${{ inputs.target_arch == 'arm' && format('v{0}', inputs.target_arm) || '' }}
+          path: dist/represents3-*
+          if-no-files-found: error
